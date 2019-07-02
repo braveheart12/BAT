@@ -70,10 +70,8 @@ const balanceURL = '/v1/accounts/balances'
 const settlementURL = '/v2/publishers/settlement'
 const grantsURL = '/v4/grants'
 
-test.afterEach.always(async t => {
-  await cleanDbs()
-  await cleanPgDb(runtime.postgres)()
-})
+test.afterEach.always(cleanDbs)
+test.afterEach.always(cleanPgDb(runtime.postgres))
 
 test('check endpoint is up with no authorization', async (t) => {
   const {
