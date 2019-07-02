@@ -76,7 +76,11 @@ const referralsBar = {
   }
 }
 
+test.beforeEach(async (t) => {
+  t.context.client = await runtime.postgres.connect()
+})
 test.afterEach.always(cleanPgDb(runtime.postgres))
+test.afterEach.always((t) => t.context.client.release())
 
 const auth = (agent) => agent.set('Authorization', 'Bearer foobarfoobar')
 
@@ -96,97 +100,84 @@ test('check auth scope', async (t) => {
 test('check settlement totals', async t => {
   t.plan(2)
 
-  const client = await runtime.postgres.connect()
-  try {
-    await client.query('BEGIN')
-    await insertFromSettlement(runtime, client, referralSettlement)
-    await insertFromSettlement(runtime, client, _.assign({}, referralSettlement, {
-      publisher: 'bar.com',
-      amount: '12',
-      probi: '12000000000000000000'
-    }))
-    await client.query('COMMIT')
-    let type
-    let body
+  const { client } = t.context
+  await client.query('BEGIN')
+  await insertFromSettlement(runtime, client, referralSettlement)
+  await insertFromSettlement(runtime, client, _.assign({}, referralSettlement, {
+    publisher: 'bar.com',
+    amount: '12',
+    probi: '12000000000000000000'
+  }))
+  await client.query('COMMIT')
+  let type
+  let body
 
-    type = 'referrals'
-    ;({ body } = await eyeshadeAgent.get(`/v1/accounts/settlements/${type}/total`).use(auth).send().expect(ok))
-    t.deepEqual(body, [{
-      channel: 'bar.com',
-      paid: '12.000000000000000000',
-      account_id: referralSettlement.owner
-    }, {
-      channel: 'foo.com',
-      paid: '10.000000000000000000',
-      account_id: referralSettlement.owner
-    }])
+  type = 'referrals'
+  ;({ body } = await eyeshadeAgent.get(`/v1/accounts/settlements/${type}/total`).use(auth).send().expect(ok))
+  t.deepEqual(body, [{
+    channel: 'bar.com',
+    paid: '12.000000000000000000',
+    account_id: referralSettlement.owner
+  }, {
+    channel: 'foo.com',
+    paid: '10.000000000000000000',
+    account_id: referralSettlement.owner
+  }])
 
-    type = 'referrals'
-    ;({ body } = await eyeshadeAgent.get(`/v1/accounts/settlements/${type}/total?order=asc`).use(auth).send().expect(ok))
-    t.deepEqual(body, [{
-      channel: 'foo.com',
-      paid: '10.000000000000000000',
-      account_id: referralSettlement.owner
-    }, {
-      channel: 'bar.com',
-      paid: '12.000000000000000000',
-      account_id: referralSettlement.owner
-    }])
-  } finally {
-    client.release()
-  }
+  type = 'referrals'
+  ;({ body } = await eyeshadeAgent.get(`/v1/accounts/settlements/${type}/total?order=asc`).use(auth).send().expect(ok))
+  t.deepEqual(body, [{
+    channel: 'foo.com',
+    paid: '10.000000000000000000',
+    account_id: referralSettlement.owner
+  }, {
+    channel: 'bar.com',
+    paid: '12.000000000000000000',
+    account_id: referralSettlement.owner
+  }])
 })
 
 test('check earnings total', async t => {
   t.plan(4)
 
-  const client = await runtime.postgres.connect()
-  try {
-    await client.query('BEGIN')
-    await insertFromReferrals(runtime, client, referrals)
-    await insertFromReferrals(runtime, client, referralsBar)
-    await client.query('COMMIT')
-    let type
-    let body
+  const { client } = t.context
+  await client.query('BEGIN')
+  await insertFromReferrals(runtime, client, referrals)
+  await insertFromReferrals(runtime, client, referralsBar)
+  await client.query('COMMIT')
+  let type
+  let body
 
-    type = 'referrals'
-    ;({ body } = await eyeshadeAgent.get(`/v1/accounts/earnings/${type}/total`).use(auth).send().expect(ok))
-    t.deepEqual(body, [{
-      channel: 'bar.com',
-      earnings: '12.000000000000000000',
-      account_id: ownerId
-    }, {
-      channel: 'foo.com',
-      earnings: '10.000000000000000000',
-      account_id: ownerId
-    }])
+  type = 'referrals'
+  ;({ body } = await eyeshadeAgent.get(`/v1/accounts/earnings/${type}/total`).use(auth).send().expect(ok))
+  t.deepEqual(body, [{
+    channel: 'bar.com',
+    earnings: '12.000000000000000000',
+    account_id: ownerId
+  }, {
+    channel: 'foo.com',
+    earnings: '10.000000000000000000',
+    account_id: ownerId
+  }])
 
-    type = 'referrals'
-    ;({ body } = await eyeshadeAgent.get(`/v1/accounts/earnings/${type}/total?order=asc`).use(auth).send().expect(ok))
-    t.deepEqual(body, [{
-      channel: 'foo.com',
-      earnings: '10.000000000000000000',
-      account_id: ownerId
-    }, {
-      channel: 'bar.com',
-      earnings: '12.000000000000000000',
-      account_id: ownerId
-    }])
-  } catch (e) {
-    client.release()
-    throw e
-  }
+  type = 'referrals'
+  ;({ body } = await eyeshadeAgent.get(`/v1/accounts/earnings/${type}/total?order=asc`).use(auth).send().expect(ok))
+  t.deepEqual(body, [{
+    channel: 'foo.com',
+    earnings: '10.000000000000000000',
+    account_id: ownerId
+  }, {
+    channel: 'bar.com',
+    earnings: '12.000000000000000000',
+    account_id: ownerId
+  }])
 
-  try {
-    const { body } = await eyeshadeAgent.get(`/v1/accounts/${encodeURIComponent(ownerId)}/transactions`)
-    t.true(body.length >= 1)
-    const count = body.reduce((memo, transaction) => _.keys(transaction).reduce((memo, key) => {
-      return memo + (transaction[key] == null ? 1 : 0)
-    }, memo), 0)
-    t.is(count, 0)
-  } finally {
-    client.release()
-  }
+  ;({ body } = await eyeshadeAgent.get(`/v1/accounts/${encodeURIComponent(ownerId)}/transactions`))
+  t.true(body.length >= 1)
+  const count = body.reduce((memo, transaction) => _.keys(transaction).reduce((memo, key) => {
+    return memo + (transaction[key] == null ? 1 : 0)
+  }, memo), 0)
+  t.is(count, 0)
 })
 
 test('create ads payment fails if bad values are given', async (t) => {
