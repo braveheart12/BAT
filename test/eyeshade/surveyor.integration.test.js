@@ -31,7 +31,7 @@ const {
 const runtime = new Runtime({
   testingCohorts: TESTING_COHORTS ? TESTING_COHORTS.split(',') : [],
   prometheus: {
-    label: 'eyeshade.workers.1',
+    label: 'eyeshade.worker.1',
     redis: BAT_REDIS_URL
   },
   postgres: {

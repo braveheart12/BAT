@@ -16,8 +16,7 @@ import {
   uint8tohex,
   justDate
 } from 'bat-utils/lib/extras-utils'
-import Postgres from 'bat-utils/lib/runtime-postgres'
-import Queue from 'bat-utils/lib/runtime-queue'
+import { Runtime } from 'bat-utils'
 import {
   makeSettlement,
   cleanDbs,
@@ -35,12 +34,24 @@ import {
 import {
   freezeOldSurveyors
 } from '../eyeshade/workers/reports'
+import {
+  updateBalances
+} from '../eyeshade/lib/transaction'
 
 dotenv.config()
 
-const postgres = new Postgres({ postgres: { url: process.env.BAT_POSTGRES_URL } })
-const queue = new Queue({ queue: { rsmq: process.env.BAT_REDIS_URL } })
-const runtime = { postgres, queue }
+const runtime = new Runtime({
+  postgres: {
+    url: process.env.BAT_POSTGRES_URL
+  },
+  queue: {
+    rsmq: process.env.BAT_REDIS_URL
+  },
+  prometheus: {
+    label: process.env.SERVICE + '.worker.1',
+    redis: process.env.BAT_REDIS_URL
+  }
+})
 
 const upholdBaseUrls = {
   'prod': 'https://api.uphold.com',
@@ -61,7 +72,7 @@ const grantsURL = '/v4/grants'
 
 test.afterEach.always(async t => {
   await cleanDbs()
-  await cleanPgDb(postgres)()
+  await cleanPgDb(runtime.postgres)()
 })
 
 test('check endpoint is up with no authorization', async (t) => {
@@ -174,6 +185,7 @@ test('ledger : user contribution workflow with uphold BAT wallet', async t => {
   body = []
   while (!body.length) {
     await timeout(2000)
+    await refreshBalances()
     ;({
       body
     } = await eyeshadeAgent.get(balanceURL)
@@ -218,6 +230,7 @@ test('ledger : user contribution workflow with uphold BAT wallet', async t => {
   body = []
   do {
     await timeout(5000)
+    await refreshBalances()
     ;({ body } = await eyeshadeAgent
       .get(balanceURL)
       .query(query)
@@ -233,9 +246,9 @@ test('ledger : user contribution workflow with uphold BAT wallet', async t => {
   })
 
   await eyeshadeAgent.post(settlementURL).send([settlement]).expect(ok)
-
   do {
     await timeout(5000)
+    await refreshBalances()
     ;({ body } = await eyeshadeAgent
       .get(balanceURL)
       .query(query)
@@ -255,7 +268,7 @@ WHERE
 `
   const {
     rows
-  } = await postgres.query(select)
+  } = await runtime.postgres.query(select)
 
   t.deepEqual(rows.map((entry) => _.omit(entry, ['from_account', 'to_account', 'document_id', 'id'])), [{
     created_at: newYear,
@@ -800,4 +813,10 @@ async function submitBatchedVotes (t, viewingCredential) {
     .post('/v2/batch/surveyor/voting')
     .send(bulkVotePayload)
     .expect(ok)
+}
+
+async function refreshBalances () {
+  const client = await runtime.postgres.connect()
+  await updateBalances(runtime, client)
+  client.release()
 }

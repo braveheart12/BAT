@@ -9,11 +9,9 @@ import {
   cleanDbs,
   dbUri
 } from '../utils'
-import Postgres from 'bat-utils/lib/runtime-postgres'
 import { monthly } from '../../eyeshade/workers/ads'
 import { Runtime } from 'bat-utils'
 
-const postgres = new Postgres({ postgres: { url: process.env.BAT_POSTGRES_URL } })
 const runtime = new Runtime({
   postgres: { url: process.env.BAT_POSTGRES_URL },
   database: {
@@ -22,7 +20,7 @@ const runtime = new Runtime({
 })
 
 test.afterEach.always(async t => {
-  await cleanPgDb(postgres)()
+  await cleanPgDb(runtime.postgres)()
   await cleanDbs()
 })
 
@@ -49,15 +47,15 @@ test('ads payout report cron job takes a snapshot of balances', async t => {
   const amount = 1000
 
   const insertQuery = `insert into transactions (id, created_at, description, transaction_type, from_account_type, from_account, to_account_type, to_account, amount) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-  await postgres.query(insertQuery, [txId, createdAt, description, transactionType, fromAccountType, fromAccount, toAccountType, paymentId, amount])
+  await runtime.postgres.query(insertQuery, [txId, createdAt, description, transactionType, fromAccountType, fromAccount, toAccountType, paymentId, amount])
 
   // Refresh the account balances materialized view so the balance filters through
-  await postgres.query(`refresh materialized view account_balances`)
+  await runtime.postgres.query(`refresh materialized view account_balances`)
 
   await monthly({}, runtime)
 
   // Ensure the wallet balance made it in
-  const potentialPayments = (await postgres.query(`select * from potential_payments_ads`)).rows
+  const potentialPayments = (await runtime.postgres.query(`select * from potential_payments_ads`)).rows
   t.is(potentialPayments.length, 1, 'the correct number of payments were inserted')
 
   const potentialPayment = potentialPayments[0]

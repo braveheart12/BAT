@@ -1,4 +1,7 @@
 const moment = require('moment')
+const {
+  updateBalances
+} = require('../lib/transaction')
 
 const freezeInterval = process.env.FREEZE_SURVEYORS_AGE_DAYS
 
@@ -26,6 +29,24 @@ const daily = async (debug, runtime) => {
   debug('daily', 'running again ' + moment(tomorrow).fromNow())
 }
 
+async function hourly (debug, runtime) {
+  const client = await runtime.postgres.connect()
+  await updateBalances(runtime, client, true)
+
+  const nextTime = timeUntil(1000 * 60 * 60)
+  setTimeout(() => hourly(debug, runtime), nextTime)
+  const nextDate = (new Date((nextTime + +(new Date())))).toISOString()
+  debug('hourly', `running again ${nextDate}`)
+}
+
+function timeUntil (interval) {
+  const now = new Date()
+  const thisTime = now - (now % interval)
+  const nextTime = thisTime + interval
+  const timeUntil = nextTime - new Date()
+  return timeUntil
+}
+
 exports.name = 'reports'
 exports.freezeOldSurveyors = freezeOldSurveyors
 
@@ -49,7 +70,7 @@ async function freezeOldSurveyors (debug, runtime, olderThanDays) {
 
   await Promise.all(rows.map(async (row) => {
     const surveyorId = row.id
-    await runtime.queue.send(debug, 'surveyor-frozen-report', { surveyorId, mix: true, shouldUpdateBalances: true })
+    await runtime.queue.send(debug, 'surveyor-frozen-report', { surveyorId, mix: true })
   }))
 }
 
@@ -74,5 +95,6 @@ exports.initialize = async (debug, runtime) => {
 
   if ((typeof process.env.DYNO === 'undefined') || (process.env.DYNO === 'worker.1')) {
     setTimeout(() => { daily(debug, runtime) }, 5 * 1000)
+    setTimeout(() => hourly(debug, runtime), timeUntil(1000 * 60 * 60))
   }
 }

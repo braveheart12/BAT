@@ -36,6 +36,7 @@ const runtime = new Runtime({
   }
 })
 
+test.before(cleanDbs)
 test.afterEach.always(cleanDbs)
 
 test('a stats endpoint exists', async (t) => {

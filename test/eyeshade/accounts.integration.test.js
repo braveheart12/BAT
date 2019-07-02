@@ -76,7 +76,7 @@ const referralsBar = {
   }
 }
 
-test.afterEach(cleanPgDb(runtime.postgres))
+test.afterEach.always(cleanPgDb(runtime.postgres))
 
 const auth = (agent) => agent.set('Authorization', 'Bearer foobarfoobar')
 
