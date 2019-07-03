@@ -31,6 +31,7 @@ test.afterEach.always(cleanPgDb(runtime.postgres))
 
 test('referrals are inserted into mongo then eventually postgres', async t => {
   const eyeshadeMongo = await connectToDb('eyeshade')
+  const postgresClient = await runtime.postgres.connect()
 
   const txId = uuidV4().toLowerCase()
   const referral = {
@@ -51,7 +52,7 @@ test('referrals are inserted into mongo then eventually postgres', async t => {
   let rows
   do { // wait until referral-report is processed and transactions are entered into postgres
     await timeout(500).then(async () => {
-      rows = (await runtime.postgres.query(`select * from transactions where transaction_type = 'referral'`)).rows
+      rows = (await postgresClient.query(`select * from transactions where transaction_type = 'referral'`)).rows
     })
   } while (rows.length === 0)
   t.true(rows.length === 1)

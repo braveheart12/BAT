@@ -50,14 +50,13 @@ Prometheus.prototype.quit = function () {
   const { interval, caches } = this
   const { publisher, subscriber } = caches
   clearInterval(interval)
-  if (publisher && publisher.cache) {
-    publisher.cache.quit()
+  if (publisher) {
+    publisher.quit()
   }
   if (subscriber) {
-    const { cache } = subscriber
-    cache.del(this.listenerId)
-    cache.unsubscribe()
-    cache.quit()
+    subscriber.del(this.listenerId)
+    subscriber.unsubscribe()
+    subscriber.quit()
   }
 }
 

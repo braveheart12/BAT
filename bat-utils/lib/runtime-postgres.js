@@ -27,13 +27,9 @@ const Postgres = function (config, runtime) {
       }
     })
   }
-  process.on('exit', () => this.quit())
 }
 
 Postgres.prototype = {
-  quit: function () {
-    return this.pool.end()
-  },
   connect: function () {
     return this.pool.connect()
   },

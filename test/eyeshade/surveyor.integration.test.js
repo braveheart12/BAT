@@ -1,6 +1,8 @@
 import {
   serial as test
 } from 'ava'
+// import Postgres from 'bat-utils/lib/runtime-postgres'
+// import Queue from 'bat-utils/lib/runtime-queue'
 import { Runtime } from 'bat-utils'
 import SDebug from 'sdebug'
 import {
@@ -29,7 +31,7 @@ const {
 const runtime = new Runtime({
   testingCohorts: TESTING_COHORTS ? TESTING_COHORTS.split(',') : [],
   prometheus: {
-    label: 'eyeshade.worker.1',
+    label: 'eyeshade.workers.1',
     redis: BAT_REDIS_URL
   },
   postgres: {

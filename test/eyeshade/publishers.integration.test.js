@@ -17,11 +17,7 @@ import Postgres from 'bat-utils/lib/runtime-postgres'
 
 const postgres = new Postgres({ postgres: { url: process.env.BAT_POSTGRES_URL } })
 
-test.beforeEach(async (t) => {
-  t.context.client = await postgres.connect()
-})
-test.afterEach.always(async (t) => {
-  t.context.client.release()
+test.afterEach.always(async t => {
   await cleanPgDb(postgres)()
   await cleanDbs()
 })
@@ -59,7 +55,7 @@ test('can post a manual settlement from publisher app using token auth', async t
   const url = `/v2/publishers/settlement`
   const eyeshadeMongo = await connectToDb('eyeshade')
   const settlements = eyeshadeMongo.collection('settlements')
-  const { client } = t.context
+  const client = await postgres.connect()
 
   const owner = 'publishers#uuid:' + uuidV4().toLowerCase()
   const manualSettlement = {

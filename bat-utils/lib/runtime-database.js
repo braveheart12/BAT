@@ -27,11 +27,6 @@ const Database = function (config, runtime) {
     if (context.type !== 'debug') debug(context.className.toLowerCase(), context.message)
   })
   this.db.addMiddleware(this.middleware)
-  process.on('exit', () => this.quit())
-}
-
-Database.prototype.quit = function () {
-  this.db.close()
 }
 
 Database.prototype.middleware = function (context) {
