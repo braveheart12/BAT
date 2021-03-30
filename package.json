@@ -98,7 +98,7 @@
     "mongodb": "^2.2.35",
     "monk": "6.0.5",
     "monotonic-timestamp": "0.0.9",
-    "netmask": "1.0.6",
+    "netmask": "2.0.1",
     "newrelic": "^4.1.1",
     "node-anonize2-relic": "0.1.6",
     "node-slack": "0.0.7",
