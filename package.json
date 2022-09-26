@@ -104,7 +104,7 @@
     "node-slack": "0.0.7",
     "pg": "^7.9.0",
     "prom-client": "10.2.2",
-    "proxy-agent": "^2.3.1",
+    "proxy-agent": "^5.0.0",
     "redis": "^2.8.0",
     "rsmq": "^0.8.2",
     "rsmq-worker": "^0.5.2",
