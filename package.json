@@ -62,7 +62,7 @@
   "dependencies": {
     "@babel/cli": "^7.4.3",
     "@babel/node": "^7.2.2",
-    "@hapi/joi": "^15.0.3",
+    "@hapi/joi": "^15.1.1",
     "@octokit/rest": "^15.5.1",
     "@sentry/node": "^4.6.6",
     "@uphold/uphold-sdk-javascript": "github:brave-intl/uphold-sdk-javascript#bump-lodash-merge",
